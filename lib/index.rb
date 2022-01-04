@@ -36,15 +36,22 @@ end
   repo: ENV["GITHUB_REPOSITORY_NAME"] || @event_json.dig("repository", "name"),
 }
 
+def run_on_select_files
+  files_list = files_to_check? ? ENV["FILES_TO_CHECK"] : ""
+  begin
+    JSON.parse(`standardrb --parallel -f json #{files_list}`)
+  rescue Errno::ENOENT => e
+    { error: "Attempting to missing file with this check: #{e}" }
+  end
+end
+
 @report =
   if ENV["REPORT_PATH"]
     read_json(ENV["REPORT_PATH"])
   else
     Dir.chdir(ENV["GITHUB_WORKSPACE"]) do
       if run_on_select_files?
-        if files_to_check?
-          JSON.parse(`standardrb --parallel -f json #{ENV["FILES_TO_CHECK"]}`)
-        end
+        run_on_select_files
       else
         JSON.parse(`standardrb --parallel -f json`)
       end
